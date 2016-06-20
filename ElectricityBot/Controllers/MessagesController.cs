@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Description;
+using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Connector;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -12,6 +13,8 @@ using System.IO;
 
 namespace ElectricityBot
 {
+    public enum BotState { Default, Usage };
+
     public class ElectricityUsage
     {
         public int usage { get; set; }
@@ -20,24 +23,7 @@ namespace ElectricityBot
     [BotAuthentication]
     public class MessagesController : ApiController
     {
-        private int? GetElectricityUsage()
-        {
-            int? result = null;
-            try
-            {
-                var requestUrl = @"http://setsuden.yahooapis.jp/v1/Setsuden/latestPowerUsage?appid=＜アプリケーションID＞&area=tokyo&output=json";
-                var request = WebRequest.Create(requestUrl);
-                var response = request.GetResponse();
-                var rawJson = new StreamReader(response.GetResponseStream()).ReadToEnd();
-                var json = JObject.Parse(rawJson);
-                result = (int)json["ElectricPowerUsage"]["Usage"]["$"];
-            }
-            catch
-            {
-                // Do nothing.
-            }
-            return result;
-        }
+
 
         /// <summary>
         /// POST: api/Messages
@@ -49,13 +35,12 @@ namespace ElectricityBot
             {
 
                 Message reply = null;
-                if (message.Text == "電力使用状況は？")
+                if (message.Text == "電力使用状況は？" || message.GetBotPerUserInConversationData<BotState>("state") == BotState.Usage)
                 {
-                    //reply = message.CreateReplyMessage("？？？kWです");
-                    var usage = GetElectricityUsage();
-                    reply = message.CreateReplyMessage(
-                        usage != null ? string.Format("{0}kWです", usage) : "取得できませんでした。。"
-                        );
+                    message.SetBotPerUserInConversationData("state", BotState.Usage);
+
+                    // Dialog.csで定義したSimpleDialogクラスを呼び出す
+                    return await Conversation.SendAsync(message, () => new SimpleDialog());
                 }
                 else
                 {
