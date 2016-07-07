@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Description;
 using Microsoft.Bot.Builder.Dialogs;
+using Microsoft.Bot.Builder.FormFlow;
 using Microsoft.Bot.Connector;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -23,7 +24,10 @@ namespace ElectricityBot
     [BotAuthentication]
     public class MessagesController : ApiController
     {
-
+        internal static IDialog<ElectricityUsageQuery> MakeUsageDialog()
+        {
+            return Chain.From(() => FormDialog.FromForm(ElectricityUsageQuery.BuildForm));
+        }
 
         /// <summary>
         /// POST: api/Messages
@@ -39,8 +43,8 @@ namespace ElectricityBot
                 {
                     message.SetBotPerUserInConversationData("state", BotState.Usage);
 
-                    // Dialog.csで定義したSimpleDialogクラスを呼び出す
-                    return await Conversation.SendAsync(message, () => new SimpleDialog());
+                    // FormFlow を呼び出して、電力会社について情報を集める
+                    return await Conversation.SendAsync(message, MakeUsageDialog);
                 }
                 else
                 {
